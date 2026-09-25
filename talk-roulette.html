@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Talk Roulette</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FFFFFF;
+    --surface:#FFFFFF;
+    --surface-2:#F3FBF6;
+    --border:#DFEEE4;
+    --text:#1E2B23;
+    --text-dim:#7C9286;
+    --green:#33B673;
+    --green-dark:#238F58;
+    --green-soft:#E8F8EE;
+    --coral:#FF6B54;
+    --coral-dark:#3A140D;
+    box-sizing:border-box;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:inherit;}
+  html{scroll-padding-top:env(safe-area-inset-top,0px); height:100%;}
+  body{
+    height:100%; margin:0;
+    background:var(--bg); color:var(--text);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:30px 20px; position:relative; overflow:hidden;
+  }
+  .blob{
+    position:fixed; border-radius:50%; filter:blur(50px); pointer-events:none; z-index:0;
+  }
+  .blob-1{ width:340px; height:340px; top:-120px; left:-100px; background:radial-gradient(circle, #B9EDCB, transparent 70%); }
+  .blob-2{ width:300px; height:300px; bottom:-100px; right:-90px; background:radial-gradient(circle, #CDEFD6, transparent 70%); }
+  .blob-3{ width:220px; height:220px; bottom:20%; left:-80px; background:radial-gradient(circle, #E3F7E9, transparent 70%); }
+  .blob-4{ width:180px; height:180px; top:12%; right:-60px; background:radial-gradient(circle, #D6F3E0, transparent 70%); }
+
+  .topbar{
+    position:fixed; top:calc(18px + env(safe-area-inset-top,0px));
+    left:20px; right:20px; display:flex; justify-content:space-between; align-items:center; z-index:5;
+  }
+  .logo{ display:flex; align-items:center; gap:9px; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:16px; color:var(--text); }
+  .logo svg{ color:var(--green); flex-shrink:0; }
+  #soundBtn{
+    width:38px; height:38px; border-radius:10px; border:1px solid var(--border);
+    background:var(--surface); color:var(--text-dim); display:flex; align-items:center; justify-content:center;
+    cursor:pointer; transition:border-color .15s ease, color .15s ease; box-shadow:0 1px 3px rgba(30,60,40,0.06);
+  }
+  #soundBtn:hover{ border-color:var(--green); color:var(--green-dark); }
+
+  main{ width:100%; max-width:440px; display:flex; flex-direction:column; align-items:center; z-index:1; }
+
+  .controls{ display:flex; gap:10px; width:100%; margin-bottom:26px; }
+  select{
+    flex:1; appearance:none; -webkit-appearance:none;
+    background:var(--surface); border:1px solid var(--border); color:var(--text);
+    font-family:'Inter',sans-serif; font-size:14px; font-weight:500;
+    padding:11px 34px 11px 14px; border-radius:12px; cursor:pointer;
+    box-shadow:0 1px 3px rgba(30,60,40,0.05);
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237C9286' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 14px center; transition:border-color .15s ease;
+  }
+  select:hover, select:focus, select:focus-visible{ outline:none; }
+
+  h1{
+    font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600;
+    letter-spacing:0.03em; color:var(--text-dim); margin:0 0 18px; text-align:center;
+  }
+
+  .word-card{
+    width:100%; min-height:170px; background:var(--surface);
+    border:1px solid var(--border); border-radius:20px;
+    box-shadow:0 6px 22px rgba(40,110,70,0.08);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:26px 20px; text-align:center; gap:10px;
+  }
+  .word{
+    font-family:'Space Grotesk',sans-serif; font-size:clamp(18px, 4.6vw, 25px); font-weight:600;
+    line-height:1.35; color:var(--text);
+  }
+  .word.placeholder{ color:var(--text-dim); font-weight:500; font-size:17px; }
+  .word.spinning{ color:var(--green-dark); }
+  .tag{
+    display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;
+    color:var(--green-dark); background:var(--green-soft); padding:5px 12px; border-radius:999px;
+    letter-spacing:0.01em; min-height:12px;
+  }
+  .tag::before{ content:""; width:6px; height:6px; border-radius:50%; background:var(--green); }
+  .tag:empty{ opacity:0; }
+
+  .instructions{ margin:22px 0 28px; text-align:center; color:var(--text-dim); font-size:13.5px; line-height:1.6; max-width:320px; }
+  .instructions b{ color:var(--text); font-weight:600; }
+
+  .actions{ display:flex; gap:12px; width:100%; }
+  button.cta{
+    flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
+    font-family:'Inter',sans-serif; font-size:15px; font-weight:700;
+    padding:14px 16px; border-radius:12px; border:none; cursor:pointer;
+    transition:transform .12s ease, filter .12s ease, opacity .12s ease;
+  }
+  button.cta:active{ transform:scale(0.96); }
+  button.cta:disabled{ opacity:0.45; cursor:default; transform:none; }
+  #startBtn{ background:var(--coral); color:#fff; box-shadow:0 6px 16px rgba(255,107,84,0.30); }
+  #startBtn:hover:not(:disabled){ filter:brightness(1.06); }
+  #shuffleBtn{ background:var(--surface); color:var(--text); border:1px solid var(--border); }
+  #shuffleBtn:hover:not(:disabled){ border-color:var(--green); color:var(--green-dark); }
+
+  @media (max-width:420px){ .controls{ flex-direction:column; } .actions{ flex-direction:column; } }
+</style>
+</head>
+<body>
+
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+  <div class="blob blob-4"></div>
+
+  <div class="topbar">
+    <div class="logo">
+      <svg width="26" height="26" viewBox="0 0 28 28" fill="none">
+        <rect x="3" y="3" width="20" height="20" rx="7" stroke="currentColor" stroke-width="2"/>
+        <path d="M7 23 L7 27.5 L11.5 23" fill="currentColor"/>
+        <circle cx="9" cy="9" r="1.6" fill="currentColor"/>
+        <circle cx="13" cy="13" r="1.6" fill="currentColor"/>
+        <circle cx="17" cy="17" r="1.6" fill="currentColor"/>
+      </svg>
+      Talk Roulette
+    </div>
+    <button id="soundBtn" aria-label="Toggle sound" aria-pressed="true"></button>
+  </div>
+
+  <main>
+    <div class="controls">
+      <select id="langSelect" aria-label="Language"></select>
+      <select id="topicSelect" aria-label="Topic"></select>
+    </div>
+
+    <h1>Choose a topic</h1>
+
+    <div class="word-card">
+      <div class="word placeholder" id="wordDisplay">Press Start</div>
+      <div class="tag" id="tagDisplay"></div>
+    </div>
+
+    <p class="instructions"><b>30 seconds</b> to think it over, then <b>1 minute</b> to speak out loud about it.</p>
+
+    <div class="actions">
+      <button class="cta" id="startBtn">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5v11l9-5.5-9-5.5z"/></svg>
+        <span id="startLabel">Start</span>
+      </button>
+      <button class="cta" id="shuffleBtn" disabled>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
+          <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>
+          <line x1="4" y1="4" x2="9" y2="9"/>
+        </svg>
+        <span id="shuffleLabel">Another topic</span>
+      </button>
+    </div>
+  </main>
+
+<script>
+const UI = {
+  en:{ all:"All topics", start:"Start", another:"Another topic" },
+  ru:{ all:"Все темы", start:"Начать", another:"Другая тема" },
+  uk:{ all:"Усі теми", start:"Почати", another:"Інша тема" }
+};
+
+const TOPICS = [
+  { id:"life", name:{en:"Life Stories", ru:"Жизненные истории", uk:"Життєві історії"},
+    words:{
+      en:["Your childhood home","A trip you'll never forget","Your first job","A mistake that taught you something","Your proudest moment","A person who changed your life","Your favorite childhood memory","A time you were really scared","The best gift you ever got","A tradition in your family","Your dream vacation","A skill you wish you had"],
+      ru:["Дом твоего детства","Поездка, которую не забудешь","Твоя первая работа","Ошибка, которая тебя научила","Момент, которым ты гордишься","Человек, который изменил твою жизнь","Любимое воспоминание из детства","Момент, когда тебе было по-настоящему страшно","Лучший подарок, который ты получал","Традиция в твоей семье","Отпуск твоей мечты","Навык, который ты хотел бы иметь"],
+      uk:["Дім твого дитинства","Подорож, яку не забудеш","Твоя перша робота","Помилка, яка тебе навчила","Момент, яким ти пишаєшся","Людина, яка змінила твоє життя","Улюблений спогад з дитинства","Момент, коли тобі було по-справжньому страшно","Найкращий подарунок, який ти отримував","Традиція у твоїй родині","Відпустка твоєї мрії","Навичка, яку ти хотів би мати"]
+    }},
+  { id:"opinions", name:{en:"Opinions & Debates", ru:"Мнения и споры", uk:"Думки та дискусії"},
+    words:{
+      en:["Social media: good or bad?","Is money the key to happiness?","Should school be different?","City life vs. countryside","Is AI a threat or a help?","Are humans naturally good?","Should everyone travel more?","Is fame worth it?","Working from home vs. office","Should kids have phones?","Is competition healthy?","Does age really matter?"],
+      ru:["Соцсети: польза или вред?","Деньги — ключ к счастью?","Должна ли школа быть другой?","Город или деревня","ИИ — угроза или помощь?","Люди изначально добры?","Должен ли каждый путешествовать больше?","Стоит ли слава того?","Работа дома или в офисе","Нужны ли детям телефоны?","Конкуренция — это хорошо?","Возраст действительно важен?"],
+      uk:["Соцмережі: користь чи шкода?","Гроші — ключ до щастя?","Чи має школа бути іншою?","Місто чи село","ШІ — загроза чи допомога?","Люди від природи добрі?","Чи має кожен більше подорожувати?","Слава варта того?","Робота вдома чи в офісі","Чи потрібні дітям телефони?","Конкуренція — це добре?","Вік справді має значення?"]
+    }},
+  { id:"hypo", name:{en:"What If...", ru:"А что если...", uk:"А що якщо..."},
+    words:{
+      en:["If you had a superpower","If you won the lottery","If you could time travel","If you lived 200 years ago","If you were invisible for a day","If animals could talk","If you could read minds","If you switched lives with someone","If you could learn any skill instantly","If the internet disappeared","If you could live anywhere","If you met your future self"],
+      ru:["Если бы у тебя была суперсила","Если бы ты выиграл в лотерею","Если бы ты мог путешествовать во времени","Если бы ты жил 200 лет назад","Если бы ты стал невидимым на день","Если бы животные могли говорить","Если бы ты умел читать мысли","Если бы ты поменялся жизнью с кем-то","Если бы ты мог мгновенно освоить любой навык","Если бы интернет исчез","Если бы ты мог жить где угодно","Если бы ты встретил себя из будущего"],
+      uk:["Якби у тебе була суперсила","Якби ти виграв у лотерею","Якби ти міг подорожувати в часі","Якби ти жив 200 років тому","Якби ти став невидимим на день","Якби тварини могли говорити","Якби ти вмів читати думки","Якби ти обмінявся життям з кимось","Якби ти міг миттєво опанувати будь-яку навичку","Якби інтернет зник","Якби ти міг жити будь-де","Якби ти зустрів себе з майбутнього"]
+    }},
+  { id:"feelings", name:{en:"Feelings & Growth", ru:"Чувства и рост", uk:"Почуття та розвиток"},
+    words:{
+      en:["The moment you felt truly brave","A time you had to let go of something","The advice you'd give your younger self","A change that scared you but helped you grow","The hardest decision you've made","A belief you used to have but don't anymore","Someone you need to thank","A risk that paid off","Who you were 5 years ago","A moment you felt truly proud","Something you had to forgive","A turning point in your life"],
+      ru:["Момент, когда ты был по-настоящему смелым","Момент, когда пришлось что-то отпустить","Совет, который бы дал себе в прошлом","Перемена, которая пугала, но помогла тебе вырасти","Самое трудное решение, которое ты принимал","Убеждение, в которое ты раньше верил, а теперь нет","Человек, которого стоит поблагодарить","Риск, который окупился","Каким ты был 5 лет назад","Момент, когда ты по-настоящему собой гордился","Что-то, что тебе пришлось простить","Поворотный момент в твоей жизни"],
+      uk:["Момент, коли ти був по-справжньому сміливим","Момент, коли довелося щось відпустити","Порада, яку дав би собі в минулому","Зміна, яка лякала, але допомогла тобі вирости","Найважче рішення, яке ти приймав","Переконання, в яке ти раніше вірив, а тепер ні","Людина, яку варто подякувати","Ризик, який окупився","Яким ти був 5 років тому","Момент, коли ти по-справжньому собою пишався","Щось, що тобі довелося пробачити","Поворотний момент у твоєму житті"]
+    }},
+  { id:"culture", name:{en:"Culture & Society", ru:"Культура и общество", uk:"Культура та суспільство"},
+    words:{
+      en:["The perfect weekend","Modern dating","Trends you don't understand","A movie that changed your view","Music that defines you","Something from your culture people find strange","The future of work","How your country is different","A book everyone should read","A tradition you'd change","Something overrated","Something underrated"],
+      ru:["Идеальные выходные","Современные свидания","Тренды, которые ты не понимаешь","Фильм, который изменил твой взгляд","Музыка, которая тебя определяет","То в твоей культуре, что кажется другим странным","Будущее работы","Чем отличается твоя страна","Книга, которую должен прочитать каждый","Традиция, которую ты бы изменил","Что-то переоценённое","Что-то недооценённое"],
+      uk:["Ідеальні вихідні","Сучасні побачення","Тренди, які ти не розумієш","Фільм, який змінив твій погляд","Музика, яка тебе визначає","Те у твоїй культурі, що іншим здається дивним","Майбутнє роботи","Чим відрізняється твоя країна","Книга, яку має прочитати кожен","Традиція, яку б ти змінив","Щось переоцінене","Щось недооцінене"]
+    }},
+  { id:"fun", name:{en:"Fun & Random", ru:"Всякое интересное", uk:"Всяке цікаве"},
+    words:{
+      en:["Your hidden talent","A guilty pleasure","Your favorite childhood show","Weirdest food you tried","Your dream job as a kid","A funny story about you","Your go-to karaoke song","The best meal you ever had","A nickname you had","Your comfort food","The last thing that made you laugh","Something you collect"],
+      ru:["Твой скрытый талант","Маленькая слабость","Любимый мультик или шоу из детства","Самая странная еда, которую ты пробовал","Работа мечты в детстве","Забавная история о тебе","Твоя коронная песня для караоке","Лучшее блюдо, которое ты пробовал","Прозвище, которое у тебя было","Еда, которая тебя успокаивает","Последнее, что тебя рассмешило","То, что ты коллекционируешь"],
+      uk:["Твій прихований талант","Маленька слабкість","Улюблений мультфільм або шоу з дитинства","Найдивніша їжа, яку ти куштував","Робота мрії в дитинстві","Смішна історія про тебе","Твоя коронна пісня для караоке","Найкраща страва, яку ти куштував","Прізвисько, яке в тебе було","Їжа, яка тебе заспокоює","Останнє, що тебе розсміяло","Те, що ти колекціонуєш"]
+    }},
+  { id:"wyr", name:{en:"Would You Rather", ru:"Что бы ты выбрал", uk:"Що б ти обрав"},
+    words:{
+      en:["Be famous or be invisible","Read minds or predict the future","Never use social media again or never travel again","Be rich but bored or poor but adventurous","Always say what you think or always stay silent","Live without music or without movies","Have unlimited money or unlimited time","Know when you'll die or how you'll die","Be the smartest or the funniest in the room","Live in the past or in the future","Speak every language or play every instrument","Have no internet or no car"],
+      ru:["Быть знаменитым или невидимым","Читать мысли или предсказывать будущее","Больше никогда не пользоваться соцсетями или больше никогда не путешествовать","Быть богатым, но скучающим, или бедным, но с приключениями","Всегда говорить, что думаешь, или всегда молчать","Жить без музыки или без фильмов","Иметь неограниченные деньги или неограниченное время","Знать, когда умрёшь, или как умрёшь","Быть самым умным или самым смешным в компании","Жить в прошлом или в будущем","Говорить на всех языках или играть на всех инструментах","Остаться без интернета или без машины"],
+      uk:["Бути відомим чи невидимим","Читати думки чи передбачати майбутнє","Більше ніколи не користуватися соцмережами чи більше ніколи не подорожувати","Бути багатим, але нудьгувати, чи бідним, але з пригодами","Завжди казати, що думаєш, чи завжди мовчати","Жити без музики чи без фільмів","Мати необмежені гроші чи необмежений час","Знати, коли помреш, чи як помреш","Бути найрозумнішим чи найсмішнішим у компанії","Жити в минулому чи в майбутньому","Говорити всіма мовами чи грати на всіх інструментах","Залишитися без інтернету чи без машини"]
+    }},
+  { id:"people", name:{en:"Relationships & People", ru:"Отношения и люди", uk:"Стосунки та люди"},
+    words:{
+      en:["What makes a good friend","A quality you admire in others","How you show love","A conflict you handled well","Someone who inspires you","What you look for in a partner","A friendship that changed you","How your family shaped who you are","Something you learned from a stranger","How you make new friends","A person you lost touch with","What loyalty means to you"],
+      ru:["Что делает друга хорошим другом","Качество, которое ты ценишь в людях","Как ты проявляешь любовь","Конфликт, с которым ты хорошо справился","Человек, который тебя вдохновляет","Что ты ищешь в партнёре","Дружба, которая изменила тебя","Как семья повлияла на то, кто ты сейчас","Чему тебя научил незнакомец","Как ты заводишь новых друзей","Человек, с которым ты потерял связь","Что для тебя значит верность"],
+      uk:["Що робить друга хорошим другом","Якість, яку ти цінуєш у людях","Як ти проявляєш любов","Конфлікт, з яким ти добре впорався","Людина, яка тебе надихає","Що ти шукаєш у партнері","Дружба, яка тебе змінила","Як родина вплинула на те, ким ти є","Чого тебе навчив незнайомець","Як ти заводиш нових друзів","Людина, з якою ти втратив зв'язок","Що для тебе означає відданість"]
+    }},
+  { id:"dreams", name:{en:"Dreams & Future", ru:"Мечты и будущее", uk:"Мрії та майбутнє"},
+    words:{
+      en:["Where you see yourself in 10 years","A dream you haven't chased yet","The life you imagined as a kid","A place you want to live someday","Something on your bucket list","A skill you want to master","The legacy you want to leave","A risk you want to take","Your idea of a perfect life","A career you almost chose","Something you want to build or create","How you imagine the world in 50 years"],
+      ru:["Каким ты видишь себя через 10 лет","Мечта, за которой ты пока не пошёл","Жизнь, которую ты представлял в детстве","Место, где ты хотел бы жить когда-нибудь","Что-то из твоего списка желаний","Навык, который ты хочешь освоить","Наследие, которое ты хочешь оставить","Риск, на который ты хочешь пойти","Твоё представление об идеальной жизни","Карьера, которую ты почти выбрал","Что-то, что ты хочешь создать","Каким ты представляешь мир через 50 лет"],
+      uk:["Яким ти бачиш себе через 10 років","Мрія, за якою ти ще не пішов","Життя, яке ти уявляв у дитинстві","Місце, де ти хотів би жити колись","Щось із твого списку бажань","Навичка, яку ти хочеш опанувати","Спадок, який ти хочеш залишити","Ризик, на який ти хочеш піти","Твоє уявлення про ідеальне життя","Кар'єра, яку ти майже обрав","Щось, що ти хочеш створити","Яким ти уявляєш світ через 50 років"]
+    }},
+  { id:"deep", name:{en:"Deep Questions", ru:"Глубокие вопросы", uk:"Глибокі питання"},
+    words:{
+      en:["What does happiness really mean","Do people ever really change","What makes a life well lived","Is it better to know the truth or stay comfortable","Something you believe that others don't","Can you love someone and still let them go","What does home mean to you","Is fear ever a good guide","What's worth fighting for","Do we control our fate or does it control us","What makes someone truly wise","Better to regret trying or regret not trying"],
+      ru:["Что на самом деле значит счастье","Люди вообще способны меняться?","Что делает жизнь по-настоящему прожитой","Лучше знать правду или оставаться в комфорте","Во что ты веришь, а другие нет","Можно ли любить кого-то и всё равно отпустить","Что для тебя значит дом","Страх может быть хорошим ориентиром?","За что стоит бороться","Мы управляем своей судьбой или она нами","Что делает человека по-настоящему мудрым","Лучше пожалеть, что попробовал, или что не попробовал"],
+      uk:["Що насправді означає щастя","Люди взагалі здатні змінюватися?","Що робить життя по-справжньому прожитим","Краще знати правду чи залишатися в комфорті","У що ти віриш, а інші ні","Чи можна любити когось і все одно відпустити","Що для тебе означає дім","Страх може бути хорошим орієнтиром?","За що варто боротися","Ми керуємо своєю долею чи вона нами","Що робить людину по-справжньому мудрою","Краще пожалкувати, що спробував, чи що не спробував"]
+    }}
+];
+
+const ICON_SOUND_ON = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7"/><path d="M18.5 5.5a9 9 0 010 13"/></svg>`;
+const ICON_SOUND_OFF = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>`;
+
+const langSelect = document.getElementById('langSelect');
+const topicSelect = document.getElementById('topicSelect');
+const wordDisplay = document.getElementById('wordDisplay');
+const tagDisplay = document.getElementById('tagDisplay');
+const startBtn = document.getElementById('startBtn');
+const shuffleBtn = document.getElementById('shuffleBtn');
+const startLabel = document.getElementById('startLabel');
+const shuffleLabel = document.getElementById('shuffleLabel');
+const soundBtn = document.getElementById('soundBtn');
+
+let lang = 'en';
+let spinning = false;
+let started = false;
+let soundOn = true;
+let audioCtx = null;
+let currentItem = null;
+
+soundBtn.innerHTML = ICON_SOUND_ON;
+
+function getAudio(){
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function playTick(freq){
+  if(!soundOn) return;
+  try{
+    const ctx = getAudio();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.05, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.04);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime + 0.05);
+  }catch(e){}
+}
+function playLanding(){
+  if(!soundOn) return;
+  try{
+    const ctx = getAudio();
+    [660, 990].forEach((f, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine'; osc.frequency.value = f;
+      const t = ctx.currentTime + i * 0.09;
+      gain.gain.setValueAtTime(0.001, t);
+      gain.gain.exponentialRampToValueAtTime(0.09, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(t); osc.stop(t + 0.3);
+    });
+  }catch(e){}
+}
+
+soundBtn.addEventListener('click', () => {
+  soundOn = !soundOn;
+  soundBtn.innerHTML = soundOn ? ICON_SOUND_ON : ICON_SOUND_OFF;
+  soundBtn.setAttribute('aria-pressed', String(soundOn));
+});
+
+function buildLangOptions(){
+  langSelect.innerHTML = `
+    <option value="en">English</option>
+    <option value="ru">Русский</option>
+    <option value="uk">Українська</option>`;
+  langSelect.value = lang;
+}
+
+function buildTopicOptions(){
+  const t = UI[lang];
+  const current = topicSelect.value || 'all';
+  topicSelect.innerHTML = `<option value="all">${t.all}</option>` +
+    TOPICS.map(tp => `<option value="${tp.id}">${tp.name[lang]}</option>`).join('');
+  topicSelect.value = current;
+}
+
+function refreshTexts(){
+  const t = UI[lang];
+  startLabel.textContent = t.start;
+  shuffleLabel.textContent = t.another;
+  buildTopicOptions();
+}
+
+function currentPool(){
+  const topicId = topicSelect.value;
+  if(topicId === 'all'){
+    return TOPICS.flatMap(tp => tp.words.en.map((_, idx) => ({ topicId:tp.id, idx })));
+  }
+  const tp = TOPICS.find(t => t.id === topicId);
+  return tp.words.en.map((_, idx) => ({ topicId:tp.id, idx }));
+}
+
+function pickRandom(pool, exclude){
+  let item;
+  do{ item = pool[Math.floor(Math.random()*pool.length)]; }
+  while(pool.length > 1 && exclude && item.topicId === exclude.topicId && item.idx === exclude.idx);
+  return item;
+}
+
+function topicName(topicId){
+  const tp = TOPICS.find(t => t.id === topicId);
+  return tp ? tp.name[lang] : '';
+}
+
+function wordText(item){
+  const tp = TOPICS.find(t => t.id === item.topicId);
+  return tp.words[lang][item.idx];
+}
+
+function setWord(item){
+  currentItem = item;
+  wordDisplay.textContent = wordText(item);
+  tagDisplay.textContent = topicName(item.topicId);
+}
+
+function spin(){
+  if(spinning) return;
+  const pool = currentPool();
+  if(!pool.length) return;
+  spinning = true; started = true;
+  startBtn.disabled = true; shuffleBtn.disabled = true;
+  wordDisplay.classList.remove('placeholder');
+  wordDisplay.classList.add('spinning');
+
+  let ticks = 0;
+  const totalTicks = 22;
+  const lastItem = currentItem;
+
+  function tick(){
+    setWord(pickRandom(pool, currentItem));
+    playTick(520 + Math.random()*260);
+    ticks++;
+    if(ticks < totalTicks){
+      const delay = 35 + Math.pow(ticks / totalTicks, 2.5) * 160;
+      setTimeout(tick, delay);
+    }else{
+      setWord(pickRandom(pool, lastItem));
+      playLanding();
+      wordDisplay.classList.remove('spinning');
+      spinning = false;
+      startBtn.disabled = false; shuffleBtn.disabled = false;
+    }
+  }
+  tick();
+}
+
+langSelect.addEventListener('change', () => {
+  lang = langSelect.value;
+  refreshTexts();
+  if(started && !spinning && currentItem){
+    setWord(currentItem);
+  }
+});
+
+function resetToIdle(){
+  spinning = false;
+  started = false;
+  currentItem = null;
+  wordDisplay.classList.remove('spinning');
+  wordDisplay.classList.add('placeholder');
+  wordDisplay.textContent = 'Press Start';
+  tagDisplay.textContent = '';
+  startBtn.disabled = false;
+  shuffleBtn.disabled = true;
+}
+
+topicSelect.addEventListener('change', () => {
+  const topicId = topicSelect.value;
+  if(!currentItem){ return; }
+  if(topicId === 'all' || topicId === currentItem.topicId){ return; }
+  resetToIdle();
+});
+
+startBtn.addEventListener('click', spin);
+shuffleBtn.addEventListener('click', spin);
+
+buildLangOptions();
+refreshTexts();
+</script>
+</body>
+</html>
